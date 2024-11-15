@@ -47,6 +47,8 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Demo
 
+https://yapweijun1996.github.io/Network-Latency-Checker/
+
 
 
 
