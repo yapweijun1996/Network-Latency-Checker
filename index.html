@@ -1,132 +1,109 @@
+
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>Network Latency Checker</title>
-		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-	</head>
-	<body>
-		<h1>Network Latency Checker</h1>
-		<p id="status"></p>
-		<canvas id="latencyChart" width="400" height="200" style="max-height:80vh;"></canvas>
-		
-		<script>
-			let latencyChart; // Declare the chart object globally to ensure we can access it
-			
-			// Check network status and measure latency
-			function checkNetworkStatus() {
-				const statusElem = document.getElementById("status");
-				if (navigator.onLine) {
-					statusElem.textContent = "You are online.";
-					checkLatency();
-				} else {
-					statusElem.textContent = "You are offline.";
-					// Simulate zero latency and update chart color to red
-					storeLatencyData(0, true);
-				}
-			}
-			
-			// Measure network latency by loading a small image
-			function checkLatency() {
-				const startTime = Date.now();
-				const img = new Image();
-				
-				// Use a small image hosted on a reliable server
-				img.src = "https://i.pinimg.com/736x/3e/11/9d/3e119d2c63e50e362840db3b4bfd19c5.jpg?cache=" + startTime;
-				
-				img.onload = () => {
-					const endTime = Date.now();
-					const latency = endTime - startTime;
-					console.log(`Network latency is ${latency} ms.`);
-					
-					// Store latency data in localStorage
-					storeLatencyData(latency);
-				};
-				
-				img.onerror = () => {
-					console.log("Latency check failed. You may have a poor or unstable connection.");
-				};
-			}
-			
-			// Store the latency data in localStorage
-			function storeLatencyData(latency, isOffline = false) {
-				let latencyData = JSON.parse(localStorage.getItem('latencyData')) || [];
-				
-				// Add new latency value to the data array
-				latencyData.push(latency);
-				
-				// Limit the number of data points to 100 (for performance reasons)
-				if (latencyData.length > 360) {
-					latencyData.shift(); // Remove the oldest data point
-				}
-				
-				// Save updated latency data back to localStorage
-				localStorage.setItem('latencyData', JSON.stringify(latencyData));
-				
-				// Update the chart with new data
-				updateLatencyChart(latencyData, isOffline);
-			}
-			
-			// Update the chart with latency data
-			function updateLatencyChart(latencyData, isOffline = false) {
-				const ctx = document.getElementById('latencyChart').getContext('2d');
-				
-				// Create the chart if it doesn't exist
-				if (!latencyChart) {
-					latencyChart = new Chart(ctx, {
-						type: 'line',
-						data: {
-							labels: latencyData.map((_, index) => index + 1), // Labels for each data point
-							datasets: [{
-								label: 'Network Latency (ms)',
-								data: latencyData,
-								fill: false,
-								borderColor: isOffline ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)', // Red when offline
-								pointBackgroundColor: isOffline ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)', // Red when offline
-								tension: 0.1
-							}]
-						},
-						options: {
-							responsive: true,
-							animation: {
-								duration: 0 // Disable animation
-							},
-							scales: {
-								x: {
-									title: {
-										display: true,
-										text: 'Time (s)'
-									}
-								},
-								y: {
-									title: {
-										display: true,
-										text: 'Latency (ms)'
-									},
-									min: 0
-								}
-							}
-						}
-					});
-				} else {
-					// Update the chart data if the chart is already created
-					latencyChart.data.labels = latencyData.map((_, index) => index + 1);
-					latencyChart.data.datasets[0].data = latencyData;
-					latencyChart.data.datasets[0].borderColor = isOffline ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)';
-					latencyChart.data.datasets[0].pointBackgroundColor = isOffline ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)';
-					latencyChart.update();
-				}
-			}
-			
-			// Run the check and start checking every 5 seconds
-			setInterval(checkNetworkStatus, 5000);
-			
-			// Load saved latency data and initialize chart on page load
-			window.onload = () => {
-				const savedLatencyData = JSON.parse(localStorage.getItem('latencyData')) || [];
-				updateLatencyChart(savedLatencyData);
-			};
-		</script>
-	</body>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Latency Checker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <h1>Network Latency Checker</h1>
+    <p id="status"></p>
+    <canvas id="latencyChart" width="400" height="200" style="max-height:80vh;"></canvas>
+    <button onclick="manualUpdateChart()">Update Chart</button>
+    <button onclick="clearLatencyData()">Clear Data</button>
+
+    <script>
+      let latencyChart;
+
+      function checkNetworkStatus() {
+        const statusElem = document.getElementById("status");
+        if (navigator.onLine) {
+          statusElem.textContent = "You are online.";
+          checkLatency();
+        } else {
+          statusElem.textContent = "You are offline.";
+          storeLatencyData(0, true);
+        }
+      }
+
+      function checkLatency() {
+        const startTime = Date.now();
+        const img = new Image();
+        img.src = "https://i.pinimg.com/736x/3e/11/9d/3e119d2c63e50e362840db3b4bfd19c5.jpg?cache=" + startTime;
+        img.onload = () => {
+          const endTime = Date.now();
+          const latency = endTime - startTime;
+          console.log(`Network latency is ${latency} ms.`);
+          storeLatencyData(latency);
+          URL.revokeObjectURL(img.src); // Clear the cache after the image is loaded
+        };
+        img.onerror = () => {
+          console.log("Latency check failed. You may have a poor or unstable connection.");
+        };
+      }
+
+      function storeLatencyData(latency, isOffline = false) {
+        let latencyData = JSON.parse(localStorage.getItem('latencyData')) || [];
+        latencyData.push(latency);
+        if (latencyData.length > 60) {
+          latencyData.shift();
+        }
+        localStorage.setItem('latencyData', JSON.stringify(latencyData));
+        updateLatencyChart(latencyData, isOffline);
+      }
+
+      function updateLatencyChart(latencyData, isOffline = false) {
+        const ctx = document.getElementById('latencyChart').getContext('2d');
+        if (!latencyChart) {
+          latencyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: latencyData.map((_, index) => index + 1),
+              datasets: [{
+                label: 'Network Latency (ms)',
+                data: latencyData,
+                fill: false,
+                borderColor: isOffline ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)',
+                pointBackgroundColor: isOffline ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)',
+                tension: 0.1
+              }]
+            },
+            options: {
+              responsive: true,
+              animation: { duration: 0 },
+              scales: {
+                x: { title: { display: true, text: 'Time (s)' } },
+                y: { title: { display: true, text: 'Latency (ms)' }, min: 0 }
+              }
+            }
+          });
+        } else {
+          latencyChart.data.labels = latencyData.map((_, index) => index + 1);
+          latencyChart.data.datasets[0].data = latencyData;
+          latencyChart.data.datasets[0].borderColor = isOffline ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)';
+          latencyChart.data.datasets[0].pointBackgroundColor = isOffline ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)';
+          latencyChart.update();
+        }
+      }
+
+      function clearLatencyData() {
+        localStorage.removeItem('latencyData');
+        updateLatencyChart([]);
+        console.log("LocalStorage data cleared.");
+      }
+      function manualUpdateChart() {
+        checkNetworkStatus();
+        console.log("manualUpdateChart");
+      }
+
+      setInterval(checkNetworkStatus, 3000);
+
+      window.onload = () => {
+        const savedLatencyData = JSON.parse(localStorage.getItem('latencyData')) || [];
+        updateLatencyChart(savedLatencyData);
+      };
+    </script>
+  </body>
 </html>
